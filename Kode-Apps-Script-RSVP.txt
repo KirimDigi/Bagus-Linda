@@ -1,0 +1,24 @@
+﻿const SHEET_ID = 'GANTI_DENGAN_ID_SHEET';
+const SHEET_NAME = 'Sheet1';
+
+function _sh() {
+  return SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+}
+
+function doGet(e) {
+  if (e && e.parameter && e.parameter.action === 'list') {
+    const v = _sh().getDataRange().getValues(), out = [];
+    for (let i = 1; i < v.length; i++) out.push({
+      waktu: v[i][0] ? Utilities.formatDate(new Date(v[i][0]), 'Asia/Jakarta', 'dd MMM yyyy HH:mm') : '',
+      nama: v[i][1] || '', kehadiran: v[i][2] || '', tamu: v[i][3] || '', ucapan: v[i][4] || '' });
+    out.reverse();
+    return ContentService.createTextOutput(JSON.stringify({ data: out })).setMimeType(ContentService.MimeType.JSON);
+  }
+  return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const d = JSON.parse(e.postData.contents);
+  _sh().appendRow([new Date(), d.nama || '', d.kehadiran || '', d.tamu || '', d.ucapan || '']);
+  return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+}
