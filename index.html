@@ -6125,8 +6125,96 @@
         } else {
           run();
         }
-        window.addEventListener('load', run);
-      })();
+      window.addEventListener('load', run);
+    })();
+  </script>
+  <script id="motion-fallback-js">
+    // Fallback hanya-di-index: isi src background video cover (motion-19.mp4).
+    // HTML bawaan sudah punya <div class="elementor-background-video-container"><video ...>
+    // tapi KOSONG tanpa src, karena JS Elementor hasil copy tidak berisi handler
+    // background-video. Akibatnya video tidak pernah jalan.
+    // Meniru perilaku situs asli: JANGAN autoplay saat load (masih di balik cover),
+    // tapi buffer + putar saat tombol "Buka Undangan" diklik.
+    (function () {
+      function parseSettings(el) {
+        try { return JSON.parse(el.getAttribute('data-settings')); }
+        catch (e) { return null; }
+      }
+      function playVideo(v) {
+        try {
+          var p = v.play();
+          if (p && p.catch) { p.catch(function () { /* tunggu interaksi user */ }); }
+        } catch (e) {}
+      }
+      var videos = [];
+      function initMotion() {
+        document.querySelectorAll('[data-settings*="background_video_link"]').forEach(function (el) {
+          var s = parseSettings(el);
+          if (!s || s.background_background !== 'video' || !s.background_video_link) return;
+          var link = ('' + s.background_video_link).replace(/\\\//g, '/');
+          var start = parseFloat(s.background_video_start || 0);
+          var end = parseFloat(s.background_video_end || 0);
+          var playOnce = (s.background_play_once === 'yes');
+          var box = el.querySelector('.elementor-background-video-container');
+          if (!box) {
+            box = document.createElement('div');
+            box.className = 'elementor-background-video-container';
+            el.insertBefore(box, el.firstChild);
+          }
+          var v = box.querySelector('video');
+          if (!v) {
+            v = document.createElement('video');
+            v.className = 'elementor-background-video elementor-background-video-hosted';
+            v.setAttribute('role', 'presentation');
+            box.appendChild(v);
+          }
+          if (!v.getAttribute('src')) {
+            v.src = link;
+            v.preload = 'auto';
+            v.muted = true;
+            v.defaultMuted = true;
+            v.playsInline = true;
+            v.setAttribute('playsinline', '');
+            v.setAttribute('webkit-playsinline', '');
+            v.removeAttribute('autoplay');
+            if (!playOnce) { v.loop = true; }
+            v.style.width = '100%';
+            v.style.height = '100%';
+            v.style.objectFit = 'cover';
+            v.addEventListener('loadedmetadata', function () {
+              try { if (start > 0 && start < v.duration) { v.currentTime = start; } } catch (e) {}
+            });
+            if (playOnce && end > 0) {
+              v.addEventListener('timeupdate', function () {
+                if (v.currentTime >= end) { v.pause(); }
+              });
+            }
+            try { v.load(); } catch (e) {}
+          }
+          if (videos.indexOf(v) === -1) { videos.push(v); }
+        });
+      }
+      function playAll() {
+        videos.forEach(function (v) { if (v.paused) { playVideo(v); } });
+      }
+      function bindOpen() {
+        var btn = document.getElementById('tombolbuka');
+        if (btn && !btn.getAttribute('data-motion-bound')) {
+          btn.setAttribute('data-motion-bound', '1');
+          btn.addEventListener('click', function () {
+            // Cover bergeser ~1500ms (animasi jQuery bawaan); putar motion setelahnya.
+            setTimeout(playAll, 1600);
+          });
+        }
+      }
+      function run() { initMotion(); bindOpen(); }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', run);
+      } else {
+        run();
+      }
+      window.addEventListener('load', run);
+    })();
   </script>
   <script type="module" src="./beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495"
     integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg=="
