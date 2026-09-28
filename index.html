@@ -1438,6 +1438,51 @@
       }
     }
   </style>
+  <style id="foto-fallback-css">
+    /* Fallback hanya-di-index: tampilkan galeri 2 kolom kiri-kanan walau JS Elementor gagal.
+       Begitu JS Elementor jalan, ia menambah class e-gallery-container ke wadah,
+       sehingga aturan :not(.e-gallery-container) di bawah otomatis nonaktif
+       dan layout masonry asli yang mengambil alih. */
+    .elementor-gallery__container:not(.e-gallery-container) {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      grid-gap: 10px !important;
+      gap: 10px !important;
+    }
+
+    .elementor-gallery__container:not(.e-gallery-container) .e-gallery-item {
+      display: block !important;
+      width: 100% !important;
+      margin: 0 !important;
+      position: relative !important;
+      overflow: hidden !important;
+    }
+
+    .elementor-gallery__container:not(.e-gallery-container) .e-gallery-image.elementor-gallery-item__image {
+      background-size: cover !important;
+      background-position: center center !important;
+      background-repeat: no-repeat !important;
+      display: block !important;
+      width: 100% !important;
+      aspect-ratio: 2 / 3 !important;
+      height: auto !important;
+      min-height: 0 !important;
+    }
+
+    /* iPhone/Safari lama yang belum kenal aspect-ratio: pakai trik padding */
+    @supports not (aspect-ratio: 2 / 3) {
+      .elementor-gallery__container:not(.e-gallery-container) .e-gallery-image.elementor-gallery-item__image {
+        height: 0 !important;
+        padding-bottom: 150% !important;
+      }
+    }
+
+    /* Jangan biarkan aturan lazyload di atas mematikan background slideshow/cover */
+    .e-con.e-parent.foto-fallback-show,
+    .e-con.e-parent.foto-fallback-show * {
+      background-image: var(--foto-fallback-bg, none) !important;
+    }
+  </style>
   <link rel="stylesheet" href="./ajax/libs/font-awesome/6.5.2/css/all.min.css"
     integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
     crossorigin="anonymous" referrerpolicy="no-referrer">
@@ -3798,11 +3843,44 @@
                   </div>
                 </div>
                 <style>
-                  .elementor-element-ngunduhtamu, .elementor-element-ngunduhresepsi, .elementor-element-4011384b, .elementor-element-2fa56f0b { text-align:center !important; }
-                  .elementor-element-ngunduhtamu > .elementor-widget-container, .elementor-element-ngunduhresepsi > .elementor-widget-container, .elementor-element-4011384b > .elementor-widget-container, .elementor-element-2fa56f0b > .elementor-widget-container { margin:0px 0px 0px 0px; text-align:center !important; }
-                  .elementor-element-ngunduhtamu .elementor-heading-title, .elementor-element-ngunduhresepsi .elementor-heading-title, .elementor-element-2fa56f0b .elementor-heading-title { font-family:"Caudex", Sans-serif !important; font-size:20px !important; font-weight:600 !important; line-height:38px !important; color:#000000 !important; text-align:center !important; }
-                  .elementor-element-4011384b .jet-listing-dynamic-field__content { color:#000000 !important; font-family:"Aboreto", Sans-serif !important; font-size:20px !important; font-weight:600 !important; text-transform:uppercase !important; text-align:center !important; }
-                  .elementor-element-4011384b .jet-listing-dynamic-field { justify-content:center !important; }
+                  .elementor-element-ngunduhtamu,
+                  .elementor-element-ngunduhresepsi,
+                  .elementor-element-4011384b,
+                  .elementor-element-2fa56f0b {
+                    text-align: center !important;
+                  }
+
+                  .elementor-element-ngunduhtamu>.elementor-widget-container,
+                  .elementor-element-ngunduhresepsi>.elementor-widget-container,
+                  .elementor-element-4011384b>.elementor-widget-container,
+                  .elementor-element-2fa56f0b>.elementor-widget-container {
+                    margin: 0px 0px 0px 0px;
+                    text-align: center !important;
+                  }
+
+                  .elementor-element-ngunduhtamu .elementor-heading-title,
+                  .elementor-element-ngunduhresepsi .elementor-heading-title,
+                  .elementor-element-2fa56f0b .elementor-heading-title {
+                    font-family: "Caudex", Sans-serif !important;
+                    font-size: 20px !important;
+                    font-weight: 600 !important;
+                    line-height: 38px !important;
+                    color: #000000 !important;
+                    text-align: center !important;
+                  }
+
+                  .elementor-element-4011384b .jet-listing-dynamic-field__content {
+                    color: #000000 !important;
+                    font-family: "Aboreto", Sans-serif !important;
+                    font-size: 20px !important;
+                    font-weight: 600 !important;
+                    text-transform: uppercase !important;
+                    text-align: center !important;
+                  }
+
+                  .elementor-element-4011384b .jet-listing-dynamic-field {
+                    justify-content: center !important;
+                  }
                 </style>
                 <div
                   class="elementor-element elementor-element-ngunduhtamu elementor-invisible elementor-widget elementor-widget-heading"
@@ -6006,6 +6084,50 @@
       background-size: cover;
     }
   </style>
+  <script id="foto-fallback-js">
+      // Fallback hanya-di-index: tampilkan foto tanpa tergantung jQuery/Elementor.
+      // 1) Galeri: salin data-thumbnail -> background-image + pastikan tinggi ada.
+      // 2) Slideshow/cover: buka blokir lazyload Elementor (.e-lazyloaded) agar
+      //    background-image asli (./foto/*.jpeg) langsung berlaku.
+      (function () {
+        function showGallery() {
+          document.querySelectorAll('.e-gallery-image[data-thumbnail]').forEach(function (el) {
+            var url = el.getAttribute('data-thumbnail');
+            if (url && !el.style.backgroundImage) {
+              el.style.backgroundImage = 'url("' + url + '")';
+            }
+          });
+        }
+        function unlockLazyload() {
+          document.querySelectorAll('.e-con.e-parent:not(.e-lazyloaded):not(.e-no-lazyload)').forEach(function (el) {
+            el.classList.add('e-lazyloaded');
+          });
+          // Slideshow Elementor dibuat via JS; kalau JS-nya gagal, pasang 1 foto pertama sebagai background biasa.
+          document.querySelectorAll('[data-settings*="background_slideshow_gallery"]').forEach(function (el) {
+            if (el.querySelector('.elementor-background-slideshow')) return; // Elementor sudah jalan, jangan ganggu
+            try {
+              var s = JSON.parse(el.getAttribute('data-settings'));
+              var g = s && s.background_slideshow_gallery;
+              if (g && g.length && g[0].url) {
+                var url = g[0].url.replace(/\\\//g, '/');
+                el.style.backgroundImage = 'url("' + url + '")';
+                el.style.backgroundSize = 'cover';
+                el.style.backgroundPosition = 'center center';
+                el.classList.add('foto-fallback-show');
+                el.style.setProperty('--foto-fallback-bg', 'url("' + url + '")');
+              }
+            } catch (e) { /* abaikan, biarkan Elementor asli yang handle */ }
+          });
+        }
+        function run() { showGallery(); unlockLazyload(); }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', run);
+        } else {
+          run();
+        }
+        window.addEventListener('load', run);
+      })();
+  </script>
   <script type="module" src="./beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495"
     integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg=="
     data-cf-beacon='{"version":"2024.11.0","token":"e976b156af73466291d2640f7a5c8199","r":1,"spa":2}'
